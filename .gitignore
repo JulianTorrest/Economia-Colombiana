@@ -42,6 +42,9 @@ desktop.ini
 *.faiss
 *.pkl
 
+# Archivos PDF grandes (>50MB) - excluir para GitHub
+RAG/Guia 2026 Bancolombia.pdf
+
 # Archivos de backup
 *.bak
 *.backup
