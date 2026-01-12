@@ -158,31 +158,69 @@ class ANIFRAGSystem:
         return documents
     
     def load_prebuilt_vectorstore(self):
-        """Carga el vectorstore pre-construido"""
+        """Carga el vectorstore pre-construido o lo crea automáticamente"""
         try:
-            # Verificar si existe el archivo de estado
-            if not os.path.exists("rag_ready.flag"):
-                st.error("❌ Sistema RAG no inicializado. Ejecuta 'python setup_rag.py' primero.")
-                return False
-            
             # Inicializar embeddings
             if not self.embeddings:
                 self.embeddings = HuggingFaceEmbeddings(
                     model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
                 )
             
-            # Cargar vectorstore pre-construido
-            if os.path.exists("vectorstore"):
+            # Intentar cargar vectorstore pre-construido
+            if os.path.exists("vectorstore") and os.path.exists("rag_ready.flag"):
                 self.vectorstore = FAISS.load_local("vectorstore", self.embeddings, allow_dangerous_deserialization=True)
                 self.documents_loaded = True
                 st.success("✅ Sistema RAG cargado exitosamente")
                 return True
             else:
-                st.error("❌ Vectorstore no encontrado. Ejecuta 'python setup_rag.py' primero.")
-                return False
+                # Si no existe, crear automáticamente (especialmente para Streamlit Cloud)
+                st.info("🔄 Vectorstore no encontrado. Inicializando RAG automáticamente...")
+                return self.initialize_rag_automatically()
                 
         except Exception as e:
             st.error(f"❌ Error cargando sistema RAG: {str(e)}")
+            # Intentar inicialización automática como fallback
+            st.info("🔄 Intentando inicialización automática...")
+            return self.initialize_rag_automatically()
+    
+    def initialize_rag_automatically(self):
+        """Inicializa el RAG automáticamente cargando documentos desde la carpeta RAG"""
+        try:
+            st.info("🚀 Inicializando sistema RAG automáticamente...")
+            
+            # Verificar si existe la carpeta RAG
+            rag_folder = "RAG"
+            if not os.path.exists(rag_folder):
+                st.error(f"❌ Carpeta {rag_folder} no encontrada")
+                return False
+            
+            # Cargar documentos
+            with st.spinner("📄 Cargando documentos..."):
+                documents = self.load_documents_from_folder(rag_folder)
+            
+            if not documents:
+                st.warning("⚠️ No se encontraron documentos válidos en la carpeta RAG")
+                return False
+            
+            # Dividir documentos en chunks
+            with st.spinner("✂️ Procesando documentos..."):
+                text_splitter = RecursiveCharacterTextSplitter(
+                    chunk_size=1000,
+                    chunk_overlap=200,
+                    length_function=len,
+                )
+                splits = text_splitter.split_documents(documents)
+            
+            # Crear vectorstore
+            with st.spinner("🧠 Creando base de conocimiento..."):
+                self.vectorstore = FAISS.from_documents(splits, self.embeddings)
+                self.documents_loaded = True
+            
+            st.success(f"✅ Sistema RAG inicializado con {len(documents)} documentos y {len(splits)} chunks")
+            return True
+            
+        except Exception as e:
+            st.error(f"❌ Error en inicialización automática: {str(e)}")
             return False
     
     def query_groq_hybrid(self, prompt: str, use_rag: bool = True) -> str:
@@ -343,25 +381,20 @@ def show_agent_interface():
         # Sistema RAG
         st.header("📚 Sistema RAG")
         
-        # Mostrar solo el estado del sistema
-        if os.path.exists("rag_ready.flag"):
-            if st.session_state.rag_system.documents_loaded:
-                st.success("✅ Sistema RAG operativo")
-            else:
-                st.info("🔄 Cargando sistema RAG...")
-        else:
-            st.error("❌ Sistema RAG no inicializado")
-            st.markdown("""
-            **Para inicializar el sistema:**
-            1. Ejecuta: `python setup_rag.py`
-            2. Reinicia la aplicación
-            """)
+        # Inicializar RAG automáticamente si no está cargado
+        if not st.session_state.rag_system.documents_loaded:
+            if st.button("🚀 Inicializar Sistema RAG"):
+                with st.spinner("Inicializando sistema RAG..."):
+                    success = st.session_state.rag_system.load_prebuilt_vectorstore()
+                    if success:
+                        st.rerun()
         
         # Estado del sistema
         if st.session_state.rag_system.documents_loaded:
             st.success("✅ Sistema RAG operativo")
         else:
             st.warning("⚠️ Sistema RAG no cargado")
+            st.info("Haz clic en 'Inicializar Sistema RAG' para cargar los documentos")
         
         if st.session_state.rag_system.groq_client:
             st.success("✅ Groq conectado")
