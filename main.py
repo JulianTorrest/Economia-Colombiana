@@ -445,20 +445,17 @@ def show_agent_interface():
     
     st.header("💬 Chat con el Asistente")
     
-    # Inicialización lazy del RAG - solo cuando se accede al agente
+    # Inicialización automática del RAG cuando se accede al agente
     if not st.session_state.rag_system.documents_loaded:
-        if st.button("🚀 Inicializar Sistema RAG", type="primary"):
-            with st.spinner("📚 Cargando documentos y creando base de conocimiento..."):
-                success = st.session_state.rag_system.load_prebuilt_vectorstore()
-                if success:
-                    st.success("✅ Sistema RAG inicializado correctamente")
-                    st.rerun()
-                else:
-                    st.error("❌ Error al inicializar el sistema RAG")
-        else:
-            st.info("🔄 **Sistema RAG no inicializado.** Haz clic en el botón para cargar la base de conocimiento de documentos ANIF.")
-            st.warning("⚠️ **Nota:** Sin RAG solo funcionará el modo 'Solo Conocimiento General'")
-            return
+        with st.spinner("🚀 Inicializando sistema RAG automáticamente..."):
+            success = st.session_state.rag_system.load_prebuilt_vectorstore()
+            if success:
+                st.success("✅ Sistema RAG inicializado correctamente")
+                st.rerun()
+            else:
+                st.error("❌ Error al inicializar el sistema RAG")
+                st.warning("⚠️ Continuando solo con conocimiento general")
+                # No return - continuar con funcionalidad limitada
     
     # Mostrar historial de chat
     for i, message in enumerate(st.session_state.chat_history):
