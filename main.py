@@ -11,29 +11,38 @@ from typing import List, Optional
 import pandas as pd
 import plotly.express as px
 
-# Importaciones de LangChain
-try:
-    from langchain_community.document_loaders import PyPDFLoader, UnstructuredExcelLoader
-    from langchain_community.vectorstores import FAISS
-    from langchain_huggingface import HuggingFaceEmbeddings
-    from langchain_text_splitters import RecursiveCharacterTextSplitter
-    from langchain_core.documents import Document
-except ImportError:
+# Importaciones diferidas - solo cuando se necesiten
+# Esto evita demoras en el startup de Streamlit Cloud
+
+def lazy_import_langchain():
+    """Importa LangChain solo cuando se necesita"""
     try:
-        from langchain.document_loaders import PyPDFLoader, UnstructuredExcelLoader
-        from langchain.vectorstores import FAISS
-        from langchain_huggingface import HuggingFaceEmbeddings
-        from langchain_text_splitters import RecursiveCharacterTextSplitter
-        from langchain.schema import Document
-    except ImportError:
         from langchain_community.document_loaders import PyPDFLoader, UnstructuredExcelLoader
         from langchain_community.vectorstores import FAISS
-        from langchain_community.embeddings import HuggingFaceEmbeddings
+        from langchain_huggingface import HuggingFaceEmbeddings
         from langchain_text_splitters import RecursiveCharacterTextSplitter
-        from langchain.schema import Document
+        from langchain_core.documents import Document
+        return PyPDFLoader, UnstructuredExcelLoader, FAISS, HuggingFaceEmbeddings, RecursiveCharacterTextSplitter, Document
+    except ImportError:
+        try:
+            from langchain.document_loaders import PyPDFLoader, UnstructuredExcelLoader
+            from langchain.vectorstores import FAISS
+            from langchain_huggingface import HuggingFaceEmbeddings
+            from langchain_text_splitters import RecursiveCharacterTextSplitter
+            from langchain.schema import Document
+            return PyPDFLoader, UnstructuredExcelLoader, FAISS, HuggingFaceEmbeddings, RecursiveCharacterTextSplitter, Document
+        except ImportError:
+            from langchain_community.document_loaders import PyPDFLoader, UnstructuredExcelLoader
+            from langchain_community.vectorstores import FAISS
+            from langchain_community.embeddings import HuggingFaceEmbeddings
+            from langchain_text_splitters import RecursiveCharacterTextSplitter
+            from langchain.schema import Document
+            return PyPDFLoader, UnstructuredExcelLoader, FAISS, HuggingFaceEmbeddings, RecursiveCharacterTextSplitter, Document
 
-# Importaciones para Groq
-from groq import Groq
+def lazy_import_groq():
+    """Importa Groq solo cuando se necesita"""
+    from groq import Groq
+    return Groq
 
 # Configuración de la página
 st.set_page_config(
@@ -112,7 +121,9 @@ class ANIFRAGSystem:
             if not api_key.startswith('gsk_'):
                 st.error("❌ Formato de API key inválido. Debe comenzar con 'gsk_'")
                 return False
-                
+            
+            # Importación diferida de Groq
+            Groq = lazy_import_groq()
             self.groq_client = Groq(api_key=api_key.strip())
             st.success("✅ Cliente Groq inicializado correctamente")
             return True
@@ -124,6 +135,9 @@ class ANIFRAGSystem:
     def load_prebuilt_vectorstore(self):
         """Carga el vectorstore pre-construido o lo crea automáticamente"""
         try:
+            # Importación diferida de LangChain
+            PyPDFLoader, UnstructuredExcelLoader, FAISS, HuggingFaceEmbeddings, RecursiveCharacterTextSplitter, Document = lazy_import_langchain()
+            
             # Inicializar embeddings solo cuando sea necesario
             if not self.embeddings:
                 with st.spinner("🧠 Inicializando modelo de embeddings..."):
@@ -149,6 +163,9 @@ class ANIFRAGSystem:
     def initialize_rag_automatically(self):
         """Inicializa el RAG automáticamente cargando documentos desde la carpeta RAG"""
         try:
+            # Importación diferida de LangChain
+            PyPDFLoader, UnstructuredExcelLoader, FAISS, HuggingFaceEmbeddings, RecursiveCharacterTextSplitter, Document = lazy_import_langchain()
+            
             st.info("🚀 Inicializando sistema RAG automáticamente...")
             
             rag_folder = "RAG"
@@ -182,8 +199,11 @@ class ANIFRAGSystem:
             st.error(f"❌ Error en inicialización automática: {str(e)}")
             return False
     
-    def load_documents_from_folder(self, folder_path: str) -> List[Document]:
+    def load_documents_from_folder(self, folder_path: str) -> List:
         """Carga documentos desde una carpeta"""
+        # Importación diferida de LangChain
+        PyPDFLoader, UnstructuredExcelLoader, FAISS, HuggingFaceEmbeddings, RecursiveCharacterTextSplitter, Document = lazy_import_langchain()
+        
         documents = []
         folder = Path(folder_path)
         
