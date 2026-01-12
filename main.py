@@ -489,7 +489,7 @@ def main():
     # Menú de navegación
     menu_options = ["🤖 Agente", "📊 Generación de Informes", "🏛️ Herramientas ANIF"]
     selected_menu = st.selectbox("Selecciona una funcionalidad:", menu_options, key="main_menu")
-    
+
     # Inicializar el sistema RAG automáticamente
     if 'rag_system' not in st.session_state:
         st.session_state.rag_system = ANIFRAGSystem()
@@ -498,84 +498,21 @@ def main():
     if not st.session_state.rag_system.documents_loaded:
         with st.spinner("🚀 Inicializando sistema RAG automáticamente..."):
             st.session_state.rag_system.load_prebuilt_vectorstore()
-
-# Auto-inicializar RAG si no está cargado
-if not st.session_state.rag_system.documents_loaded:
-    with st.spinner("🚀 Inicializando sistema RAG automáticamente..."):
-        st.session_state.rag_system.load_prebuilt_vectorstore()
-
-# Inicializar chat_history globalmente
-if 'chat_history' not in st.session_state:
-    st.session_state.chat_history = []
-
-# Mostrar contenido según el menú seleccionado
-if selected_menu == "🤖 Agente":
-    show_agent_interface()
-elif selected_menu == "📊 Generación de Informes":
-    show_report_generation_interface()
-elif selected_menu == "🏛️ Herramientas ANIF":
-    show_anif_tools_interface()
+    
+    # Inicializar chat_history globalmente
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    
+    # Mostrar contenido según el menú seleccionado
+    if selected_menu == "🤖 Agente":
+        show_agent_interface()
+    elif selected_menu == "📊 Generación de Informes":
+        show_report_generation_interface()
+    elif selected_menu == "🏛️ Herramientas ANIF":
+        show_anif_tools_interface()
 
 def show_agent_interface():
-    """Interfaz del agente conversacional (funcionalidad original)"""
-    # Sidebar para configuración
-    with st.sidebar:
-        st.markdown('<div class="sidebar-content">', unsafe_allow_html=True)
-        st.header("⚙️ Configuración")
-        
-        # API Key de Groq
-        env_api_key = os.getenv("GROQ_API_KEY")
-        
-        if env_api_key:
-            st.info("🔑 API Key cargada desde Streamlit Secrets")
-            groq_api_key = env_api_key
-        else:
-            groq_api_key = st.text_input(
-                "🔑 Groq API Key", 
-                type="password",
-                help="Obtén tu API key gratuita en https://console.groq.com/"
-            )
-        
-        if groq_api_key:
-            if st.session_state.rag_system.initialize_groq(groq_api_key):
-                st.success("✅ Groq conectado")
-        
-        st.markdown("---")
-        
-        # Sistema RAG - Solo mostrar estado
-        st.header("📚 Sistema RAG")
-        
-        # Estado del sistema
-        if st.session_state.rag_system.documents_loaded:
-            st.success("✅ Sistema RAG operativo")
-        else:
-            st.info("🔄 Sistema RAG inicializándose automáticamente...")
-        
-        if st.session_state.rag_system.groq_client:
-            st.success("✅ Groq conectado")
-        else:
-            st.warning("⚠️ Groq no conectado")
-        
-        st.markdown("---")
-        
-        # Información del sistema
-        st.header("ℹ️ Información")
-        st.info("""
-        **Documentos disponibles:**
-        - Reportes económicos ANIF
-        - Documentos técnicos
-        - Análisis fiscales
-        - Seguimientos económicos
-        - Datos históricos
-        """)
-        
-        if st.button("🗑️ Limpiar Chat"):
-            st.session_state.chat_history = []
-            st.rerun()
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Área principal de chat
+    """Interfaz principal del agente"""
     st.header("💬 Chat con el Asistente")
     
     # Mostrar historial de chat
