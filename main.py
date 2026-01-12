@@ -551,6 +551,10 @@ def main():
 
 def show_agent_interface():
     """Interfaz principal del agente"""
+    # Inicializar chat_history si no existe
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    
     st.header("💬 Chat con el Asistente")
     
     # Mostrar historial de chat
