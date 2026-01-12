@@ -586,31 +586,59 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Sidebar para configuración
-    with st.sidebar:
-        st.header("⚙️ Configuración")
-        
-        # API Key de Groq
-        groq_api_key = st.text_input(
-            "🔑 Groq API Key",
-            type="password",
-            help="Obtén tu API key gratuita en https://console.groq.com"
-        )
+    # Inicializar el sistema RAG primero
+    if 'rag_system' not in st.session_state:
+        st.session_state.rag_system = ANIFRAGSystem()
+    
+    # Inicializar Groq automáticamente usando secretos de Streamlit Cloud
+    try:
+        # Intentar obtener la API key desde los secretos de Streamlit Cloud
+        groq_api_key = st.secrets.get("GROQ_API_KEY", None)
         
         if groq_api_key:
-            if st.session_state.rag_system.initialize_groq(groq_api_key):
-                st.success("✅ Groq conectado")
-            else:
-                st.error("❌ Error conectando Groq")
+            # Inicializar Groq automáticamente si la key está disponible
+            if not st.session_state.rag_system.groq_client:
+                st.session_state.rag_system.initialize_groq(groq_api_key)
+        else:
+            # Fallback: mostrar input manual solo si no hay secreto configurado
+            with st.sidebar:
+                st.header("⚙️ Configuración")
+                st.warning("⚠️ API key no encontrada en secretos de Streamlit Cloud")
+                
+                groq_api_key = st.text_input(
+                    "🔑 Groq API Key (Fallback)",
+                    type="password",
+                    help="Configura GROQ_API_KEY en los secretos de Streamlit Cloud"
+                )
+                
+                if groq_api_key:
+                    if st.session_state.rag_system.initialize_groq(groq_api_key):
+                        st.success("✅ Groq conectado")
+                    else:
+                        st.error("❌ Error conectando Groq")
+                        
+    except Exception as e:
+        # En desarrollo local, mostrar input manual
+        with st.sidebar:
+            st.header("⚙️ Configuración")
+            st.info("🏠 Modo desarrollo local")
+            
+            groq_api_key = st.text_input(
+                "🔑 Groq API Key",
+                type="password",
+                help="Obtén tu API key gratuita en https://console.groq.com"
+            )
+            
+            if groq_api_key:
+                if st.session_state.rag_system.initialize_groq(groq_api_key):
+                    st.success("✅ Groq conectado")
+                else:
+                    st.error("❌ Error conectando Groq")
     
     # Menú de navegación
     menu_options = ["🤖 Agente", "📊 Generación de Informes", "🏛️ Herramientas ANIF"]
     selected_menu = st.selectbox("Selecciona una funcionalidad:", menu_options, key="main_menu")
 
-    # Inicializar el sistema RAG automáticamente
-    if 'rag_system' not in st.session_state:
-        st.session_state.rag_system = ANIFRAGSystem()
-        
     # Inicialización lazy del RAG - solo cuando se necesite
     # No inicializar automáticamente para evitar timeouts en Streamlit Cloud
     
