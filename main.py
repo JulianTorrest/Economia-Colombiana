@@ -566,13 +566,299 @@ def show_agent_interface():
 
 def show_report_generation_interface():
     """Interfaz para generación automática de informes"""
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    
     st.header("📊 Generación Automática de Informes")
-    st.info("🚧 Funcionalidad en desarrollo - Próximamente disponible")
+    
+    # Inicialización automática del RAG cuando se accede a informes
+    if not st.session_state.rag_system.documents_loaded:
+        with st.spinner("🚀 Inicializando sistema RAG automáticamente..."):
+            success = st.session_state.rag_system.load_prebuilt_vectorstore()
+            if success:
+                st.success("✅ Sistema RAG inicializado correctamente")
+                st.rerun()
+            else:
+                st.error("❌ Error al inicializar el sistema RAG")
+                st.warning("⚠️ Continuando solo con conocimiento general")
+    
+    # Mostrar historial de chat
+    for i, message in enumerate(st.session_state.chat_history):
+        if message["role"] == "user":
+            st.markdown(f"""
+            <div class="chat-message user-message">
+                <strong>👤 Usuario:</strong><br>
+                {message["content"]}
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="chat-message assistant-message">
+                <strong>🤖 Asistente:</strong><br>
+                {message["content"]}
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # Input para nueva pregunta
+    user_question = st.text_input(
+        "Solicita un informe económico específico:",
+        placeholder="Ej: Genera un informe sobre las perspectivas fiscales de Colombia para 2026",
+        key="report_input"
+    )
+    
+    col1, col2 = st.columns([1, 4])
+    
+    with col1:
+        send_button = st.button("📤 Generar", type="primary")
+    
+    with col2:
+        st.markdown("**🔍 Modo de Búsqueda:**")
+        search_mode = st.radio(
+            "Selecciona el modo:",
+            ["🔄 Híbrido (RAG + Conocimiento General)", "📚 Solo RAG", "🌐 Solo Conocimiento General"],
+            index=0,
+            key="report_search_mode"
+        )
+    
+    # Procesar solicitud de informe
+    if send_button and user_question:
+        if not st.session_state.rag_system.groq_client:
+            st.error("⚠️ Por favor, configura tu API key de Groq primero")
+            return
+        
+        st.session_state.chat_history.append({
+            "role": "user",
+            "content": user_question
+        })
+        
+        with st.spinner("📊 Generando informe..."):
+            try:
+                # Agregar contexto específico para informes
+                enhanced_question = f"""Como experto analista económico de ANIF, genera un informe profesional y detallado sobre: {user_question}
+
+                El informe debe incluir:
+                1. Resumen ejecutivo
+                2. Análisis detallado con datos específicos
+                3. Tendencias y proyecciones
+                4. Recomendaciones de política
+                5. Conclusiones y próximos pasos
+                
+                Usa un formato profesional con títulos, subtítulos y estructura clara."""
+                
+                if search_mode == "🔄 Híbrido (RAG + Conocimiento General)":
+                    response = st.session_state.rag_system.query_groq_hybrid(enhanced_question, use_rag=True)
+                elif search_mode == "📚 Solo RAG":
+                    context = st.session_state.rag_system.search_similar_documents(enhanced_question) if st.session_state.rag_system.documents_loaded else ""
+                    response = st.session_state.rag_system.query_groq_hybrid(enhanced_question, use_rag=bool(context))
+                else:  # Solo Conocimiento General
+                    response = st.session_state.rag_system.query_groq_hybrid(enhanced_question, use_rag=False)
+            except Exception as e:
+                response = f"Error al generar informe: {str(e)}"
+        
+        st.session_state.chat_history.append({
+            "role": "assistant",
+            "content": response
+        })
+        
+        st.rerun()
+    
+    # Ejemplos de informes
+    if not st.session_state.chat_history:
+        st.markdown("---")
+        st.header("📋 Tipos de informes disponibles")
+        
+        report_examples = [
+            "Informe de perspectivas fiscales Colombia 2026",
+            "Análisis sectorial del sistema financiero colombiano",
+            "Reporte de impacto económico del salario mínimo 2026",
+            "Evaluación de la política monetaria del Banco de la República",
+            "Informe de competitividad económica regional"
+        ]
+        
+        cols = st.columns(2)
+        for i, report in enumerate(report_examples):
+            with cols[i % 2]:
+                if st.button(f"📊 {report}", key=f"report_example_{i}"):
+                    if not st.session_state.rag_system.groq_client:
+                        st.error("⚠️ Por favor, configura tu API key de Groq primero")
+                        return
+                    
+                    enhanced_question = f"""Como experto analista económico de ANIF, genera un informe profesional y detallado sobre: {report}
+
+                    El informe debe incluir:
+                    1. Resumen ejecutivo
+                    2. Análisis detallado con datos específicos
+                    3. Tendencias y proyecciones
+                    4. Recomendaciones de política
+                    5. Conclusiones y próximos pasos
+                    
+                    Usa un formato profesional con títulos, subtítulos y estructura clara."""
+                    
+                    st.session_state.chat_history.append({
+                        "role": "user",
+                        "content": report
+                    })
+                    
+                    with st.spinner("📊 Generando informe..."):
+                        try:
+                            response = st.session_state.rag_system.query_groq_hybrid(enhanced_question, use_rag=True)
+                        except Exception as e:
+                            response = f"Error al generar informe: {str(e)}"
+                    
+                    st.session_state.chat_history.append({
+                        "role": "assistant",
+                        "content": response
+                    })
+                    
+                    st.rerun()
 
 def show_anif_tools_interface():
     """Interfaz para herramientas especializadas de ANIF"""
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    
     st.header("🏛️ Herramientas Especializadas ANIF")
-    st.info("🚧 Funcionalidad en desarrollo - Próximamente disponible")
+    
+    # Inicialización automática del RAG cuando se accede a herramientas ANIF
+    if not st.session_state.rag_system.documents_loaded:
+        with st.spinner("🚀 Inicializando sistema RAG automáticamente..."):
+            success = st.session_state.rag_system.load_prebuilt_vectorstore()
+            if success:
+                st.success("✅ Sistema RAG inicializado correctamente")
+                st.rerun()
+            else:
+                st.error("❌ Error al inicializar el sistema RAG")
+                st.warning("⚠️ Continuando solo con conocimiento general")
+    
+    # Mostrar historial de chat
+    for i, message in enumerate(st.session_state.chat_history):
+        if message["role"] == "user":
+            st.markdown(f"""
+            <div class="chat-message user-message">
+                <strong>👤 Usuario:</strong><br>
+                {message["content"]}
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="chat-message assistant-message">
+                <strong>🤖 Asistente:</strong><br>
+                {message["content"]}
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # Input para nueva consulta especializada
+    user_question = st.text_input(
+        "Consulta especializada ANIF:",
+        placeholder="Ej: Análisis de elasticidades económicas según metodología ANIF",
+        key="anif_input"
+    )
+    
+    col1, col2 = st.columns([1, 4])
+    
+    with col1:
+        send_button = st.button("🔍 Analizar", type="primary")
+    
+    with col2:
+        st.markdown("**🔍 Modo de Búsqueda:**")
+        search_mode = st.radio(
+            "Selecciona el modo:",
+            ["🔄 Híbrido (RAG + Conocimiento General)", "📚 Solo RAG", "🌐 Solo Conocimiento General"],
+            index=0,
+            key="anif_search_mode"
+        )
+    
+    # Procesar consulta especializada
+    if send_button and user_question:
+        if not st.session_state.rag_system.groq_client:
+            st.error("⚠️ Por favor, configura tu API key de Groq primero")
+            return
+        
+        st.session_state.chat_history.append({
+            "role": "user",
+            "content": user_question
+        })
+        
+        with st.spinner("🏛️ Procesando análisis especializado..."):
+            try:
+                # Agregar contexto específico para herramientas ANIF
+                enhanced_question = f"""Como investigador senior de ANIF (Asociación Nacional de Instituciones Financieras), proporciona un análisis técnico especializado sobre: {user_question}
+
+                El análisis debe incluir:
+                1. Marco metodológico ANIF aplicable
+                2. Datos y estadísticas específicas del sector financiero colombiano
+                3. Análisis comparativo con estándares internacionales
+                4. Implicaciones para el sistema financiero y la economía
+                5. Recomendaciones técnicas especializadas
+                
+                Usa terminología técnica apropiada y referencias a estudios ANIF cuando sea relevante."""
+                
+                if search_mode == "🔄 Híbrido (RAG + Conocimiento General)":
+                    response = st.session_state.rag_system.query_groq_hybrid(enhanced_question, use_rag=True)
+                elif search_mode == "📚 Solo RAG":
+                    context = st.session_state.rag_system.search_similar_documents(enhanced_question) if st.session_state.rag_system.documents_loaded else ""
+                    response = st.session_state.rag_system.query_groq_hybrid(enhanced_question, use_rag=bool(context))
+                else:  # Solo Conocimiento General
+                    response = st.session_state.rag_system.query_groq_hybrid(enhanced_question, use_rag=False)
+            except Exception as e:
+                response = f"Error al procesar análisis: {str(e)}"
+        
+        st.session_state.chat_history.append({
+            "role": "assistant",
+            "content": response
+        })
+        
+        st.rerun()
+    
+    # Herramientas especializadas disponibles
+    if not st.session_state.chat_history:
+        st.markdown("---")
+        st.header("🔧 Herramientas Especializadas Disponibles")
+        
+        anif_tools = [
+            "Análisis de elasticidades económicas sectoriales",
+            "Evaluación de riesgo sistémico del sector financiero",
+            "Cálculo de indicadores de profundización financiera",
+            "Análisis de transmisión de política monetaria",
+            "Evaluación de impacto regulatorio en el sector financiero"
+        ]
+        
+        cols = st.columns(2)
+        for i, tool in enumerate(anif_tools):
+            with cols[i % 2]:
+                if st.button(f"🔧 {tool}", key=f"anif_tool_{i}"):
+                    if not st.session_state.rag_system.groq_client:
+                        st.error("⚠️ Por favor, configura tu API key de Groq primero")
+                        return
+                    
+                    enhanced_question = f"""Como investigador senior de ANIF (Asociación Nacional de Instituciones Financieras), proporciona un análisis técnico especializado sobre: {tool}
+
+                    El análisis debe incluir:
+                    1. Marco metodológico ANIF aplicable
+                    2. Datos y estadísticas específicas del sector financiero colombiano
+                    3. Análisis comparativo con estándares internacionales
+                    4. Implicaciones para el sistema financiero y la economía
+                    5. Recomendaciones técnicas especializadas
+                    
+                    Usa terminología técnica apropiada y referencias a estudios ANIF cuando sea relevante."""
+                    
+                    st.session_state.chat_history.append({
+                        "role": "user",
+                        "content": tool
+                    })
+                    
+                    with st.spinner("🏛️ Procesando análisis especializado..."):
+                        try:
+                            response = st.session_state.rag_system.query_groq_hybrid(enhanced_question, use_rag=True)
+                        except Exception as e:
+                            response = f"Error al procesar análisis: {str(e)}"
+                    
+                    st.session_state.chat_history.append({
+                        "role": "assistant",
+                        "content": response
+                    })
+                    
+                    st.rerun()
 
 def main():
     # Header principal
