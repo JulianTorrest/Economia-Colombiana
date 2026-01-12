@@ -124,23 +124,26 @@ class ANIFRAGSystem:
     def load_prebuilt_vectorstore(self):
         """Carga el vectorstore pre-construido o lo crea automáticamente"""
         try:
+            # Inicializar embeddings solo cuando sea necesario
             if not self.embeddings:
-                self.embeddings = HuggingFaceEmbeddings(
-                    model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-                )
+                with st.spinner("🧠 Inicializando modelo de embeddings..."):
+                    self.embeddings = HuggingFaceEmbeddings(
+                        model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+                    )
             
+            # Intentar cargar vectorstore existente primero
             if os.path.exists("vectorstore") and os.path.exists("rag_ready.flag"):
-                self.vectorstore = FAISS.load_local("vectorstore", self.embeddings, allow_dangerous_deserialization=True)
-                self.documents_loaded = True
-                st.success("✅ Sistema RAG cargado exitosamente")
-                return True
+                with st.spinner("📚 Cargando base de conocimiento existente..."):
+                    self.vectorstore = FAISS.load_local("vectorstore", self.embeddings, allow_dangerous_deserialization=True)
+                    self.documents_loaded = True
+                    return True
             else:
-                st.info("🔄 Vectorstore no encontrado. Inicializando RAG automáticamente...")
+                # Solo crear nuevo vectorstore si no existe
                 return self.initialize_rag_automatically()
                 
         except Exception as e:
             st.error(f"❌ Error cargando sistema RAG: {str(e)}")
-            st.info("🔄 Intentando inicialización automática...")
+            # En caso de error, intentar crear nuevo vectorstore
             return self.initialize_rag_automatically()
     
     def initialize_rag_automatically(self):
@@ -442,6 +445,21 @@ def show_agent_interface():
     
     st.header("💬 Chat con el Asistente")
     
+    # Inicialización lazy del RAG - solo cuando se accede al agente
+    if not st.session_state.rag_system.documents_loaded:
+        if st.button("🚀 Inicializar Sistema RAG", type="primary"):
+            with st.spinner("📚 Cargando documentos y creando base de conocimiento..."):
+                success = st.session_state.rag_system.load_prebuilt_vectorstore()
+                if success:
+                    st.success("✅ Sistema RAG inicializado correctamente")
+                    st.rerun()
+                else:
+                    st.error("❌ Error al inicializar el sistema RAG")
+        else:
+            st.info("🔄 **Sistema RAG no inicializado.** Haz clic en el botón para cargar la base de conocimiento de documentos ANIF.")
+            st.warning("⚠️ **Nota:** Sin RAG solo funcionará el modo 'Solo Conocimiento General'")
+            return
+    
     # Mostrar historial de chat
     for i, message in enumerate(st.session_state.chat_history):
         if message["role"] == "user":
@@ -593,10 +611,8 @@ def main():
     if 'rag_system' not in st.session_state:
         st.session_state.rag_system = ANIFRAGSystem()
         
-    # Auto-inicializar RAG si no está cargado
-    if not st.session_state.rag_system.documents_loaded:
-        with st.spinner("🚀 Inicializando sistema RAG automáticamente..."):
-            st.session_state.rag_system.load_prebuilt_vectorstore()
+    # Inicialización lazy del RAG - solo cuando se necesite
+    # No inicializar automáticamente para evitar timeouts en Streamlit Cloud
     
     # Inicializar chat_history globalmente
     if 'chat_history' not in st.session_state:
