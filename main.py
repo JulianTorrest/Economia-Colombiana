@@ -337,7 +337,7 @@ class ANIFRAGSystem:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": enhanced_prompt}
                 ],
-                model="llama-3.1-70b-versatile",
+                model="llama-3.3-70b-versatile",
                 temperature=0.15,
                 top_p=0.85,
                 max_tokens=6000,
@@ -404,7 +404,7 @@ class ANIFRAGSystem:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                model="llama-3.1-70b-versatile",
+                model="llama-3.3-70b-versatile",
                 temperature=0.2,
                 top_p=0.9,
                 max_tokens=4000,
