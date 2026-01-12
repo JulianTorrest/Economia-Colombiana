@@ -1,0 +1,34 @@
+# Streamlit y componentes web
+streamlit>=1.28.0
+streamlit-chat
+
+# LangChain para RAG
+langchain>=0.1.0
+langchain-community>=0.0.10
+langchain-huggingface>=0.0.3
+
+# Embeddings y vectorstore
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.0
+
+# Procesamiento de documentos
+pypdf>=3.0.0
+unstructured>=0.10.0
+python-docx>=0.8.11
+openpyxl>=3.0.0
+
+# LLM - Groq
+groq>=0.4.0
+
+# Utilidades generales
+pandas>=1.5.0
+numpy>=1.21.0
+python-dotenv>=0.19.0
+requests>=2.28.0
+
+# Logging y debugging
+loguru>=0.6.0
+
+# Interfaz mejorada
+plotly>=5.0.0
+altair>=4.0.0

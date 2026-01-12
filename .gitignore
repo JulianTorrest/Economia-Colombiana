@@ -1,0 +1,47 @@
+# Variables de entorno (contienen API keys)
+.env
+.env.local
+.env.production
+
+# Entorno virtual de Python
+venv/
+env/
+.venv/
+
+# Cache de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Archivos de Streamlit
+.streamlit/secrets.toml
+
+# Archivos temporales
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Archivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archivos de sistema
+.DS_Store
+desktop.ini
+
+# Base de datos vectorial (se regenera automáticamente)
+*.faiss
+*.pkl
+
+# Archivos de backup
+*.bak
+*.backup
