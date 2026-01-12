@@ -337,22 +337,6 @@ def main():
     if 'rag_system' not in st.session_state:
         st.session_state.rag_system = ANIFRAGSystem()
         
-    # Auto-inicializar RAG si no está cargado
-    if not st.session_state.rag_system.documents_loaded:
-        with st.spinner("🚀 Inicializando sistema RAG automáticamente..."):
-            st.session_state.rag_system.load_prebuilt_vectorstore()
-    
-    if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
-    
-    # Mostrar contenido según el menú seleccionado
-    if selected_menu == "🤖 Agente":
-        show_agent_interface()
-    elif selected_menu == "📊 Generación de Informes":
-        show_report_generation_interface()
-    elif selected_menu == "🏛️ Herramientas ANIF":
-        show_anif_tools_interface()
-
     with st.sidebar:
         st.markdown('<div class="sidebar-content">', unsafe_allow_html=True)
         st.header("⚙️ Configuración")
@@ -361,7 +345,7 @@ def main():
         env_api_key = os.getenv("GROQ_API_KEY")
         
         if env_api_key:
-            st.info("🔑 API Key cargada desde archivo .env")
+            st.info("🔑 API Key cargada desde Streamlit Secrets")
             groq_api_key = env_api_key
         else:
             groq_api_key = st.text_input(
@@ -376,7 +360,7 @@ def main():
         
         st.markdown("---")
         
-        # Sistema RAG
+        # Sistema RAG - Solo mostrar estado
         st.header("📚 Sistema RAG")
         
         # Estado del sistema
