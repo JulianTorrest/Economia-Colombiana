@@ -15,15 +15,23 @@ load_dotenv()
 # Importaciones para RAG
 try:
     from langchain_community.document_loaders import PyPDFLoader, UnstructuredExcelLoader
-    from langchain_community.embeddings import HuggingFaceEmbeddings
     from langchain_community.vectorstores import FAISS
-except ImportError:
-    from langchain.document_loaders import PyPDFLoader, UnstructuredExcelLoader
     from langchain_huggingface import HuggingFaceEmbeddings
-    from langchain.vectorstores import FAISS
-
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.schema import Document
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+    from langchain_core.documents import Document
+except ImportError:
+    try:
+        from langchain.document_loaders import PyPDFLoader, UnstructuredExcelLoader
+        from langchain.vectorstores import FAISS
+        from langchain_huggingface import HuggingFaceEmbeddings
+        from langchain.text_splitter import RecursiveCharacterTextSplitter
+        from langchain.schema import Document
+    except ImportError:
+        from langchain_community.document_loaders import PyPDFLoader, UnstructuredExcelLoader
+        from langchain_community.vectorstores import FAISS
+        from langchain_community.embeddings import HuggingFaceEmbeddings
+        from langchain.text_splitter import RecursiveCharacterTextSplitter
+        from langchain.schema import Document
 
 # Importaciones para Groq
 from groq import Groq
