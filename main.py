@@ -288,25 +288,67 @@ class ANIFRAGSystem:
         - Sugiere implicaciones para política económica
         - Cita fuentes implícitas de tu conocimiento (ej: "según datos del DANE", "conforme a reportes del Banco de la República")
         - Responde en español con terminología técnica apropiada
+        - Estructura cada respuesta con títulos y subtítulos claros
+        - Conecta explícitamente cada punto con el anterior y siguiente
+        - Usa frases de transición que muestren relaciones causales
+        - Proporciona ejemplos concretos y cifras específicas
+        - Concluye cada sección con implicaciones para la siguiente
+        - Evita listas de puntos inconexos; construye un argumento fluido
         """
         
         return base_context
     
     def create_chain_of_thought_prompt(self, prompt: str, query_type: str) -> str:
-        """Crea prompts con razonamiento paso a paso"""
+        """Crea prompts con razonamiento profundo y estructurado"""
         return f"""
-        Analiza esta consulta económica paso a paso:
-        
-        1. **Contexto de la pregunta**: ¿Qué información específica se solicita?
-        2. **Datos relevantes**: ¿Qué indicadores, cifras o tendencias son pertinentes?
-        3. **Análisis técnico**: ¿Cuáles son las variables clave y sus interrelaciones?
-        4. **Contexto temporal**: ¿Cómo se relaciona con la situación económica actual (2024-2026)?
-        5. **Comparación**: ¿Cómo se compara con períodos anteriores o países similares?
-        6. **Síntesis**: Respuesta fundamentada con conclusiones y recomendaciones
-        
-        Pregunta: {prompt}
-        
-        Proporciona un análisis completo siguiendo esta estructura.
+        Realiza un análisis económico profundo y estructurado de la siguiente consulta:
+
+        **PREGUNTA:** {prompt}
+
+        **MARCO ANALÍTICO OBLIGATORIO:**
+
+        ## 1. DIAGNÓSTICO INICIAL
+        - Identifica el problema/tema central y sus dimensiones
+        - Establece el alcance temporal y sectorial del análisis
+        - Define las variables económicas clave involucradas
+
+        ## 2. ANÁLISIS CAUSAL PROFUNDO
+        - Examina las causas fundamentales (no solo síntomas)
+        - Identifica las cadenas de causalidad económica
+        - Analiza factores estructurales vs coyunturales
+        - Evalúa interacciones entre variables macroeconómicas
+
+        ## 3. CONTEXTUALIZACIÓN INTEGRAL
+        - Situación actual de Colombia (2024-2026) con datos específicos
+        - Comparación con ciclos económicos anteriores (últimos 10 años)
+        - Benchmarking con países similares (Chile, Perú, México, Brasil)
+        - Impacto de factores externos (commodities, Fed, geopolítica)
+
+        ## 4. ANÁLISIS SECTORIAL Y DISTRIBUTIVO
+        - Efectos diferenciados por sectores económicos
+        - Impactos en diferentes grupos socioeconómicos
+        - Implicaciones regionales dentro de Colombia
+        - Conexiones con cadenas de valor globales
+
+        ## 5. PROYECCIÓN Y ESCENARIOS
+        - Tendencias esperadas a corto plazo (6-12 meses)
+        - Escenarios alternativos (optimista, base, pesimista)
+        - Factores de riesgo y oportunidades emergentes
+        - Puntos de inflexión críticos a monitorear
+
+        ## 6. SÍNTESIS ESTRATÉGICA
+        - Conclusiones integradas que conecten todos los elementos
+        - Recomendaciones de política económica específicas y viables
+        - Métricas clave para seguimiento y evaluación
+        - Implicaciones para diferentes stakeholders
+
+        **INSTRUCCIONES CRÍTICAS:**
+        - Cada sección debe conectar lógicamente con las demás
+        - Usa datos cuantitativos específicos cuando sea posible
+        - Cita fuentes implícitas (DANE, Banrep, ANIF, FMI, etc.)
+        - Mantén rigor técnico pero claridad expositiva
+        - Evita generalidades; sé específico y concreto
+        - Construye un argumento coherente de principio a fin
         """
     
     def enhanced_general_knowledge_query(self, prompt: str) -> str:
@@ -324,17 +366,13 @@ class ANIFRAGSystem:
             # 3. Obtener prompt del sistema especializado
             system_prompt = self.get_enhanced_system_prompt(query_type)
             
-            # 4. Usar parámetros optimizados según el tipo de consulta
-            if query_type in ["fiscal", "monetario"]:
-                # Consultas técnicas requieren mayor precisión
-                temperature = 0.1
-                top_p = 0.8
-            else:
-                # Consultas generales pueden ser más creativas
-                temperature = 0.2
-                top_p = 0.9
+            # 4. Usar parámetros optimizados para análisis profundo
+            # Parámetros específicos para generar respuestas más coherentes y profundas
+            temperature = 0.15  # Más determinista para mayor coherencia
+            top_p = 0.85       # Balance entre precisión y creatividad
+            max_tokens = 6000  # Más espacio para análisis completo
             
-            # 5. Llamada optimizada a Groq
+            # 5. Llamada optimizada a Groq con parámetros para profundidad
             response = self.groq_client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -343,9 +381,9 @@ class ANIFRAGSystem:
                 model="llama-3.1-70b-versatile",  # Modelo más potente
                 temperature=temperature,
                 top_p=top_p,
-                max_tokens=4000,  # Respuestas más completas
-                frequency_penalty=0.1,  # Evita repeticiones
-                presence_penalty=0.1   # Fomenta diversidad
+                max_tokens=max_tokens,
+                frequency_penalty=0.2,  # Reduce repeticiones para mayor variedad
+                presence_penalty=0.15   # Fomenta explorar nuevos temas y conexiones
             )
             
             return response.choices[0].message.content
