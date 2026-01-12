@@ -333,13 +333,14 @@ def main():
     menu_options = ["🤖 Agente", "📊 Generación de Informes", "🏛️ Herramientas ANIF"]
     selected_menu = st.selectbox("Selecciona una funcionalidad:", menu_options, key="main_menu")
     
-    # Inicializar el sistema RAG
+    # Inicializar el sistema RAG automáticamente
     if 'rag_system' not in st.session_state:
         st.session_state.rag_system = ANIFRAGSystem()
-        # Auto-cargar sistema RAG si está pre-inicializado
-        if os.path.exists("rag_ready.flag"):
-            with st.spinner("🔄 Cargando sistema RAG..."):
-                st.session_state.rag_system.load_prebuilt_vectorstore()
+        
+    # Auto-inicializar RAG si no está cargado
+    if not st.session_state.rag_system.documents_loaded:
+        with st.spinner("🚀 Inicializando sistema RAG automáticamente..."):
+            st.session_state.rag_system.load_prebuilt_vectorstore()
     
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
@@ -352,9 +353,6 @@ def main():
     elif selected_menu == "🏛️ Herramientas ANIF":
         show_anif_tools_interface()
 
-def show_agent_interface():
-    """Interfaz del agente conversacional (funcionalidad original)"""
-    # Sidebar para configuración
     with st.sidebar:
         st.markdown('<div class="sidebar-content">', unsafe_allow_html=True)
         st.header("⚙️ Configuración")
@@ -381,20 +379,11 @@ def show_agent_interface():
         # Sistema RAG
         st.header("📚 Sistema RAG")
         
-        # Inicializar RAG automáticamente si no está cargado
-        if not st.session_state.rag_system.documents_loaded:
-            if st.button("🚀 Inicializar Sistema RAG"):
-                with st.spinner("Inicializando sistema RAG..."):
-                    success = st.session_state.rag_system.load_prebuilt_vectorstore()
-                    if success:
-                        st.rerun()
-        
         # Estado del sistema
         if st.session_state.rag_system.documents_loaded:
             st.success("✅ Sistema RAG operativo")
         else:
-            st.warning("⚠️ Sistema RAG no cargado")
-            st.info("Haz clic en 'Inicializar Sistema RAG' para cargar los documentos")
+            st.info("🔄 Sistema RAG inicializándose automáticamente...")
         
         if st.session_state.rag_system.groq_client:
             st.success("✅ Groq conectado")
