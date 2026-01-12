@@ -87,6 +87,30 @@ class ANIFRAGSystem:
         self.documents_loaded = False
         self.system_ready = False
         
+        # Configuración avanzada para conocimiento general
+        self.domain_prompts = {
+            "fiscal": "Como experto senior en política fiscal colombiana con conocimiento actualizado de reformas tributarias, regla fiscal, y sostenibilidad de la deuda pública",
+            "monetario": "Como analista especializado del Banco de la República con conocimiento profundo de política monetaria, metas de inflación, y transmisión de política",
+            "sectorial": "Como especialista en análisis sectorial de la economía colombiana con expertise en banca, industria, servicios, y sector externo",
+            "internacional": "Como experto en economía internacional con enfoque en Colombia, incluyendo comercio exterior, flujos de capital, y comparaciones regionales",
+            "laboral": "Como especialista en mercado laboral colombiano con conocimiento de empleo, salarios, productividad, y políticas de empleo",
+            "general": "Como economista senior especializado en Colombia con visión integral de la economía nacional"
+        }
+        
+        self.temporal_context = """
+        Contexto económico actual de Colombia (2024-2026):
+        - Economía post-pandemia en proceso de normalización
+        - Banco de la República en ciclo de política monetaria restrictiva
+        - Inflación convergiendo gradualmente hacia la meta del 3%
+        - Reformas estructurales en implementación (tributaria, pensional, salud)
+        - Volatilidad en precios de commodities (petróleo, carbón, café)
+        - Fortalecimiento del peso colombiano vs USD
+        - Elecciones presidenciales 2026 generando expectativas
+        - Retos fiscales por envejecimiento poblacional
+        - Transición energética en marcha
+        - Digitalización acelerada del sistema financiero
+        """
+        
     def initialize_embeddings(self):
         """Inicializa los embeddings usando HuggingFace"""
         if self.embeddings is None:
@@ -223,6 +247,141 @@ class ANIFRAGSystem:
             st.error(f"❌ Error en inicialización automática: {str(e)}")
             return False
     
+    def classify_economic_query(self, prompt: str) -> str:
+        """Clasifica el tipo de consulta económica para aplicar prompts especializados"""
+        prompt_lower = prompt.lower()
+        
+        # Palabras clave por dominio
+        fiscal_keywords = ["fiscal", "tributario", "impuesto", "déficit", "deuda", "presupuesto", "gasto público", "ingresos públicos"]
+        monetary_keywords = ["monetario", "inflación", "tasa de interés", "banco república", "política monetaria", "banrep"]
+        sectorial_keywords = ["bancario", "financiero", "industrial", "servicios", "agropecuario", "minero", "construcción"]
+        international_keywords = ["exportaciones", "importaciones", "balanza", "tipo de cambio", "comercio exterior", "fdi"]
+        laboral_keywords = ["empleo", "desempleo", "salario", "productividad", "mercado laboral"]
+        
+        # Clasificación por coincidencias
+        if any(keyword in prompt_lower for keyword in fiscal_keywords):
+            return "fiscal"
+        elif any(keyword in prompt_lower for keyword in monetary_keywords):
+            return "monetario"
+        elif any(keyword in prompt_lower for keyword in sectorial_keywords):
+            return "sectorial"
+        elif any(keyword in prompt_lower for keyword in international_keywords):
+            return "internacional"
+        elif any(keyword in prompt_lower for keyword in laboral_keywords):
+            return "laboral"
+        else:
+            return "general"
+    
+    def get_enhanced_system_prompt(self, query_type: str) -> str:
+        """Genera prompts del sistema especializados por dominio"""
+        base_context = f"""
+        {self.temporal_context}
+        
+        {self.domain_prompts.get(query_type, self.domain_prompts["general"])}.
+        
+        Instrucciones avanzadas:
+        - Proporciona análisis técnico preciso con datos específicos cuando sea posible
+        - Incluye cifras, porcentajes, y comparaciones históricas relevantes
+        - Contextualiza dentro del panorama económico actual de Colombia (2024-2026)
+        - Compara con países de referencia cuando sea pertinente (Chile, Perú, México)
+        - Identifica tendencias, riesgos, y oportunidades
+        - Sugiere implicaciones para política económica
+        - Cita fuentes implícitas de tu conocimiento (ej: "según datos del DANE", "conforme a reportes del Banco de la República")
+        - Responde en español con terminología técnica apropiada
+        """
+        
+        return base_context
+    
+    def create_chain_of_thought_prompt(self, prompt: str, query_type: str) -> str:
+        """Crea prompts con razonamiento paso a paso"""
+        return f"""
+        Analiza esta consulta económica paso a paso:
+        
+        1. **Contexto de la pregunta**: ¿Qué información específica se solicita?
+        2. **Datos relevantes**: ¿Qué indicadores, cifras o tendencias son pertinentes?
+        3. **Análisis técnico**: ¿Cuáles son las variables clave y sus interrelaciones?
+        4. **Contexto temporal**: ¿Cómo se relaciona con la situación económica actual (2024-2026)?
+        5. **Comparación**: ¿Cómo se compara con períodos anteriores o países similares?
+        6. **Síntesis**: Respuesta fundamentada con conclusiones y recomendaciones
+        
+        Pregunta: {prompt}
+        
+        Proporciona un análisis completo siguiendo esta estructura.
+        """
+    
+    def enhanced_general_knowledge_query(self, prompt: str) -> str:
+        """Modo de conocimiento general potencializado con todas las mejoras"""
+        if not self.groq_client:
+            return "Error: Cliente de Groq no inicializado. Por favor, configura tu API key de Groq en la barra lateral."
+        
+        try:
+            # 1. Clasificar tipo de consulta
+            query_type = self.classify_economic_query(prompt)
+            
+            # 2. Crear prompt especializado con chain-of-thought
+            enhanced_prompt = self.create_chain_of_thought_prompt(prompt, query_type)
+            
+            # 3. Obtener prompt del sistema especializado
+            system_prompt = self.get_enhanced_system_prompt(query_type)
+            
+            # 4. Usar parámetros optimizados según el tipo de consulta
+            if query_type in ["fiscal", "monetario"]:
+                # Consultas técnicas requieren mayor precisión
+                temperature = 0.1
+                top_p = 0.8
+            else:
+                # Consultas generales pueden ser más creativas
+                temperature = 0.2
+                top_p = 0.9
+            
+            # 5. Llamada optimizada a Groq
+            response = self.groq_client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": enhanced_prompt}
+                ],
+                model="llama-3.1-70b-versatile",  # Modelo más potente
+                temperature=temperature,
+                top_p=top_p,
+                max_tokens=4000,  # Respuestas más completas
+                frequency_penalty=0.1,  # Evita repeticiones
+                presence_penalty=0.1   # Fomenta diversidad
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            error_msg = str(e)
+            # Fallback al modelo estándar si el avanzado falla
+            try:
+                return self.query_groq_hybrid_fallback(prompt)
+            except:
+                if "api_key" in error_msg.lower():
+                    return "Error: API key de Groq inválida o faltante. Por favor, verifica tu API key en la barra lateral."
+                elif "connection" in error_msg.lower() or "network" in error_msg.lower():
+                    return "Error: No se puede conectar a Groq. Verifica tu conexión a internet y que la API key sea válida."
+                elif "rate" in error_msg.lower() or "limit" in error_msg.lower():
+                    return "Error: Límite de uso de Groq alcanzado. Espera un momento antes de intentar nuevamente."
+                else:
+                    return f"Error al consultar Groq: {error_msg}"
+    
+    def query_groq_hybrid_fallback(self, prompt: str) -> str:
+        """Método de respaldo con el modelo estándar"""
+        query_type = self.classify_economic_query(prompt)
+        system_prompt = self.get_enhanced_system_prompt(query_type)
+        
+        response = self.groq_client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            model="llama-3.1-8b-instant",
+            temperature=0.2,
+            max_tokens=3000
+        )
+        
+        return response.choices[0].message.content
+    
     def query_groq_hybrid(self, prompt: str, use_rag: bool = True) -> str:
         """Consulta híbrida que combina RAG con conocimiento externo del LLM"""
         if not self.groq_client:
@@ -238,20 +397,13 @@ class ANIFRAGSystem:
                 # Evaluar confianza del RAG basado en la longitud y relevancia del contexto
                 rag_confidence = min(len(context) / 2000, 1.0) if context.strip() else 0
             
-            # Construir el prompt del sistema
-            system_prompt = """Eres un asistente especializado en análisis económico para ANIF (Asociación Nacional de Instituciones Financieras). 
-            Tu función es ayudar al equipo de investigación económica respondiendo preguntas sobre economía colombiana.
+            # Si no hay RAG o es modo solo conocimiento general, usar el método potencializado
+            if not use_rag or rag_confidence < 0.2:
+                return self.enhanced_general_knowledge_query(prompt)
             
-            Instrucciones:
-            - Responde en español
-            - Sé preciso y técnico cuando sea necesario
-            - Combina información de documentos internos con tu conocimiento general actualizado
-            - Si tienes información de documentos específicos, cítala como "según documentos ANIF"
-            - Si usas conocimiento general, indícalo como "según información general actualizada"
-            - Si no tienes información suficiente, indícalo claramente y sugiere fuentes adicionales
-            - Enfócate en análisis económico, fiscal y financiero de Colombia
-            - Proporciona análisis completo combinando ambas fuentes cuando sea posible
-            """
+            # Construir el prompt del sistema para modo híbrido
+            query_type = self.classify_economic_query(prompt)
+            system_prompt = self.get_enhanced_system_prompt(query_type)
             
             # Construir el prompt del usuario según la confianza del RAG
             if rag_confidence > 0.3 and context:
@@ -270,38 +422,43 @@ class ANIFRAGSystem:
                 
                 Indica claramente qué información proviene de cada fuente."""
             else:
-                # RAG tiene poca o ninguna información relevante
-                user_prompt = f"""No encontré información específica relevante en los documentos ANIF para esta consulta, o la información es limitada.
-                
-                Información disponible de documentos (si existe):
+                # RAG tiene poca información relevante
+                user_prompt = f"""Información limitada de documentos ANIF:
                 {context if context else "No hay información específica disponible en los documentos."}
                 
                 Pregunta: {prompt}
                 
-                Por favor, responde principalmente usando tu conocimiento general actualizado sobre economía colombiana. Si hay información de documentos, inclúyela también. Indica claramente las fuentes de tu información y sugiere dónde se podría encontrar información más específica si es necesario."""
+                Proporciona un análisis completo principalmente basado en tu conocimiento general actualizado sobre economía colombiana, complementando con cualquier información relevante de los documentos."""
             
             response = self.groq_client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                model="llama-3.1-8b-instant",
-                temperature=0.3,
-                max_tokens=2000  # Aumentado para respuestas más completas
+                model="llama-3.1-70b-versatile",
+                temperature=0.2,
+                top_p=0.9,
+                max_tokens=4000,
+                frequency_penalty=0.1,
+                presence_penalty=0.1
             )
             
             return response.choices[0].message.content
             
         except Exception as e:
             error_msg = str(e)
-            if "api_key" in error_msg.lower():
-                return "Error: API key de Groq inválida o faltante. Por favor, verifica tu API key en la barra lateral."
-            elif "connection" in error_msg.lower() or "network" in error_msg.lower():
-                return "Error: No se puede conectar a Groq. Verifica tu conexión a internet y que la API key sea válida."
-            elif "rate" in error_msg.lower() or "limit" in error_msg.lower():
-                return "Error: Límite de uso de Groq alcanzado. Espera un momento antes de intentar nuevamente."
-            else:
-                return f"Error al consultar Groq: {error_msg}"
+            # Fallback al modelo estándar
+            try:
+                return self.query_groq_hybrid_fallback(prompt)
+            except:
+                if "api_key" in error_msg.lower():
+                    return "Error: API key de Groq inválida o faltante. Por favor, verifica tu API key en la barra lateral."
+                elif "connection" in error_msg.lower() or "network" in error_msg.lower():
+                    return "Error: No se puede conectar a Groq. Verifica tu conexión a internet y que la API key sea válida."
+                elif "rate" in error_msg.lower() or "limit" in error_msg.lower():
+                    return "Error: Límite de uso de Groq alcanzado. Espera un momento antes de intentar nuevamente."
+                else:
+                    return f"Error al consultar Groq: {error_msg}"
     
     def query_groq(self, prompt: str, context: str = "") -> str:
         """Método legacy para compatibilidad - redirige al método híbrido"""
@@ -697,30 +854,6 @@ def display_generated_report(report_type, period, sections, include_recommendati
     for section_name, content in sections.items():
         st.subheader(f"## {section_name}")
         st.markdown(content)
-        st.markdown("---")
-    
-    # Botones de acción
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("📄 Exportar como PDF"):
-            st.info("Funcionalidad de exportación PDF en desarrollo")
-    
-    with col2:
-        if st.button("📊 Crear Presentación"):
-            st.info("Funcionalidad de presentación en desarrollo")
-    
-    with col3:
-        if st.button("📧 Compartir Informe"):
-            st.info("Funcionalidad de compartir en desarrollo")
-
-def show_anif_tools_interface():
-    """Interfaz para herramientas específicas de ANIF"""
-    st.header("🏛️ Herramientas Especializadas ANIF")
-    
-    # Verificar que el sistema RAG esté cargado
-    if not st.session_state.rag_system.documents_loaded:
-        st.error("❌ Sistema RAG no cargado. El sistema debe estar operativo para usar las herramientas ANIF.")
         return
     
     if not st.session_state.rag_system.groq_client:
@@ -771,10 +904,6 @@ def show_anif_tools_interface():
         show_economic_projections(anif_search_mode)
     elif selected_tool == "🔍 Análisis Sectorial":
         show_sectoral_analysis(anif_search_mode)
-
-def show_fiscal_monitor(search_mode="🔄 Híbrido (RAG + Conocimiento General)"):
-    """Monitor de seguimiento fiscal"""
-    st.subheader("💰 Monitor Fiscal")
     
     col1, col2 = st.columns([2, 1])
     
