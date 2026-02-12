@@ -27,5 +27,11 @@
 3. **Clasificación de Intención:** Se usa una herramienta interna para clasificar la consulta (Fiscal, Monetaria, etc.) y ajustar el System Prompt antes de generar la respuesta.
 
 ## 5. Ingesta Incremental (Hashing)
-**Lógica:** Se calcula un hash MD5 del contenido binario de cada archivo PDF.
-**Justificación:** Evita el reprocesamiento costoso (embedding) de archivos que no han cambiado, optimizando el tiempo de despliegue y recursos computacionales.
+**Implementación:** Sistema completo de hash MD5 para evitar reindexación de archivos sin cambios.
+**Lógica:** 
+- Se calcula un hash MD5 del contenido binario completo de cada archivo (PDF/TXT).
+- El hash se almacena en `processed_documents.json` junto con metadatos (filename, timestamp, chunks_count).
+- Antes de procesar cualquier archivo, se verifica si su hash ya existe en el registro.
+- Si existe: se retorna `status: "skipped"` sin procesamiento.
+- Si es nuevo: se procesa normalmente y se registra el hash.
+**Justificación:** Evita el reprocesamiento costoso (embedding + chunking) de archivos idénticos, optimizando significativamente el tiempo de despliegue y recursos computacionales. Crítico para producción con grandes volúmenes de documentos.

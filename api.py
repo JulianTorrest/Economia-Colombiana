@@ -3,6 +3,7 @@ import json
 import logging
 import uuid
 import shutil
+import hashlib
 from pathlib import Path
 from typing import List, Optional, Dict
 
@@ -42,6 +43,40 @@ app = FastAPI(title="ANIF RAG API", version="1.0.0")
 
 # Memoria simple en RAM (para producción usar Redis)
 SESSIONS: Dict[str, List[Dict]] = {}
+
+# Sistema de hash para ingesta incremental
+PROCESSED_HASHES: Dict[str, Dict] = {}  # hash -> {filename, timestamp, chunks_count}
+
+def calculate_file_hash(file_path: str) -> str:
+    """Calcula hash MD5 del contenido del archivo para ingesta incremental"""
+    hash_md5 = hashlib.md5()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+def load_processed_hashes():
+    """Carga el registro de archivos procesados desde disco"""
+    hash_file = Path("processed_documents.json")
+    if hash_file.exists():
+        try:
+            with open(hash_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"Error loading processed hashes: {e}")
+    return {}
+
+def save_processed_hashes():
+    """Guarda el registro de archivos procesados a disco"""
+    hash_file = Path("processed_documents.json")
+    try:
+        with open(hash_file, 'w', encoding='utf-8') as f:
+            json.dump(PROCESSED_HASHES, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"Error saving processed hashes: {e}")
+
+# Cargar hashes existentes al iniciar
+PROCESSED_HASHES = load_processed_hashes()
 
 rag_system = ANIFRAGSystem()
 # Intentar carga inicial
@@ -174,12 +209,41 @@ async def upload_document(file: UploadFile = File(...)):
         
         file_path = upload_dir / file.filename
         
-        # 1. Guardar archivo físico
+        # 1. Guardar archivo físico temporalmente
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
+        
+        # 2. Calcular hash del archivo para ingesta incremental
+        file_hash = calculate_file_hash(str(file_path))
+        
+        # 3. Verificar si el archivo ya fue procesado
+        if file_hash in PROCESSED_HASHES:
+            existing_info = PROCESSED_HASHES[file_hash]
+            logger.info("Document already processed", extra={"props": {
+                "filename": file.filename,
+                "hash": file_hash,
+                "original_filename": existing_info.get("filename"),
+                "chunks_count": existing_info.get("chunks_count", 0)
+            }})
             
-        # 2. Procesamiento Inmediato (Ingesta Incremental)
-        logger.info("Processing document...", extra={"props": {"filename": file.filename}})
+            # Eliminar archivo temporal ya que no lo necesitamos
+            if file_path.exists():
+                file_path.unlink()
+            
+            return {
+                "status": "skipped", 
+                "message": f"Archivo ya procesado previamente (hash: {file_hash[:8]}...)",
+                "original_filename": existing_info.get("filename"),
+                "chunks_count": existing_info.get("chunks_count", 0),
+                "doc_id": file.filename,
+                "hash": file_hash
+            }
+        
+        # 4. Procesamiento de documento nuevo
+        logger.info("Processing new document...", extra={"props": {
+            "filename": file.filename,
+            "hash": file_hash
+        }})
         
         documents = []
         if file.filename.lower().endswith('.pdf'):
@@ -208,8 +272,31 @@ async def upload_document(file: UploadFile = File(...)):
                 rag_system.vectorstore = FAISS.from_documents(splits, rag_system.embeddings)
                 rag_system.vectorstore.save_local("vectorstore")
                 rag_system.documents_loaded = True
+            
+            # 5. Registrar el hash del archivo procesado
+            PROCESSED_HASHES[file_hash] = {
+                "filename": file.filename,
+                "timestamp": time.time(),
+                "chunks_count": len(splits),
+                "file_size": file_path.stat().st_size if file_path.exists() else 0
+            }
+            
+            # Guardar registro de hashes a disco
+            save_processed_hashes()
+            
+            logger.info("Document processed and registered", extra={"props": {
+                "filename": file.filename,
+                "hash": file_hash,
+                "chunks_added": len(splits)
+            }})
 
-            return {"status": "success", "message": "Archivo procesado e indexado.", "chunks_added": len(splits), "doc_id": file.filename}
+            return {
+                "status": "success", 
+                "message": "Archivo procesado e indexado correctamente.",
+                "chunks_added": len(splits), 
+                "doc_id": file.filename,
+                "hash": file_hash
+            }
         else:
              raise HTTPException(status_code=400, detail="No se pudo extraer texto del archivo")
         
