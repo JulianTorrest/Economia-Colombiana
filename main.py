@@ -86,19 +86,19 @@ def show_agent_interface():
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
     
-    st.header("💬 Chat con el Asistente")
+    st.header("Chat con el Asistente")
     
     # Inicialización automática del RAG cuando se accede al agente
     if not st.session_state.rag_system.documents_loaded:
-        with st.spinner("🚀 Inicializando sistema RAG automáticamente..."):
+        with st.spinner("Inicializando sistema RAG automáticamente..."):
             # En main.py envolvemos la llamada lógica con spinner
             success = st.session_state.rag_system.load_prebuilt_vectorstore() 
             if success:
-                st.success("✅ Sistema RAG inicializado correctamente")
+                st.success("Sistema RAG inicializado correctamente")
                 st.rerun()
             else:
-                st.error("❌ Error al inicializar el sistema RAG")
-                st.warning("⚠️ Continuando solo con conocimiento general")
+                st.error("Error al inicializar el sistema RAG")
+                st.warning("Continuando solo con conocimiento general")
                 # No return - continuar con funcionalidad limitada
     
     # Mostrar historial de chat
@@ -229,14 +229,14 @@ def show_report_generation_interface():
     
     # Inicialización automática del RAG cuando se accede a informes
     if not st.session_state.rag_system.documents_loaded:
-        with st.spinner("🚀 Inicializando sistema RAG automáticamente..."):
+        with st.spinner("Inicializando sistema RAG automáticamente..."):
             success = st.session_state.rag_system.load_prebuilt_vectorstore()
             if success:
-                st.success("✅ Sistema RAG inicializado correctamente")
+                st.success("Sistema RAG inicializado correctamente")
                 st.rerun()
             else:
-                st.error("❌ Error al inicializar el sistema RAG")
-                st.warning("⚠️ Continuando solo con conocimiento general")
+                st.error("Error al inicializar el sistema RAG")
+                st.warning("Continuando solo con conocimiento general")
     
     # Mostrar historial de chat
     for i, message in enumerate(st.session_state.chat_history):
@@ -389,14 +389,14 @@ def show_anif_tools_interface():
     
     # Inicialización automática del RAG cuando se accede a herramientas ANIF
     if not st.session_state.rag_system.documents_loaded:
-        with st.spinner("🚀 Inicializando sistema RAG automáticamente..."):
+        with st.spinner("Inicializando sistema RAG automáticamente..."):
             success = st.session_state.rag_system.load_prebuilt_vectorstore()
             if success:
-                st.success("✅ Sistema RAG inicializado correctamente")
+                st.success("Sistema RAG inicializado correctamente")
                 st.rerun()
             else:
-                st.error("❌ Error al inicializar el sistema RAG")
-                st.warning("⚠️ Continuando solo con conocimiento general")
+                st.error("Error al inicializar el sistema RAG")
+                st.warning("Continuando solo con conocimiento general")
     
     # Mostrar historial de chat
     for i, message in enumerate(st.session_state.chat_history):
