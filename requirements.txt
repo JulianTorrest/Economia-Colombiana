@@ -35,3 +35,10 @@ loguru>=0.6.0
 # Interfaz mejorada
 plotly>=5.0.0
 altair>=4.0.0
+
+# API y Backend
+fastapi>=0.100.0
+uvicorn>=0.23.0
+python-multipart>=0.0.6
+pytest>=7.4.0
+httpx>=0.24.0

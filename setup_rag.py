@@ -9,21 +9,34 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 from groq import Groq
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_community.vectorstores import FAISS
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.schema import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
 from typing import List
 import pickle
 
 def load_environment():
     """Carga las variables de entorno"""
     load_dotenv()
+    
+    # Intentar cargar desde diferentes fuentes
     api_key = os.getenv("GROQ_API_KEY")
+    
     if not api_key:
-        print("❌ ERROR: GROQ_API_KEY no encontrada en .env")
+        # Intentar desde archivo .env local
+        env_file = Path(".env")
+        if env_file.exists():
+            load_dotenv(env_file)
+            api_key = os.getenv("GROQ_API_KEY")
+    
+    if not api_key:
+        print("❌ ERROR: GROQ_API_KEY no encontrada en variables de entorno")
+        print("💡 Asegúrate de que esté configurada como variable de entorno o en .env")
         return None
+    
+    print("✅ API Key cargada desde variables de entorno")
     return api_key
 
 def validate_groq_connection(api_key: str) -> bool:
@@ -157,7 +170,17 @@ def main():
     
     # 4. Cargar documentos
     print("\n4️⃣ Cargando documentos RAG...")
-    rag_folder = r"C:\Users\betol\OneDrive\Documentos\Economia Colombiana - ANIF\RAG"
+    
+    # Detectar si estamos en Docker o local
+    if os.path.exists("/app"):
+        # Estamos en Docker
+        rag_folder = "/app/RAG"
+        print(f"🐳 Ejecutando en Docker - usando ruta: {rag_folder}")
+    else:
+        # Estamos en local
+        rag_folder = "RAG"
+        print(f"🏠 Ejecutando localmente - usando ruta: {rag_folder}")
+    
     documents = load_documents_from_folder(rag_folder)
     if not documents:
         print("⚠️ ADVERTENCIA: No se cargaron documentos")
