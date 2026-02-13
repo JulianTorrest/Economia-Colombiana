@@ -215,13 +215,13 @@ python run_tests.py --rag-only
 - **Carga diferida**: Importaciones lazy para startup rápido
 - **Manejo de errores**: Fallbacks para conexiones API
 
-## 🔒 Seguridad
+##  Seguridad
 
 - **API Keys**: Nunca hardcodees API keys en el código
 - **Documentos**: Los documentos se procesan localmente
 - **Datos**: No se envían datos sensibles a servicios externos (excepto queries a Groq)
 
-## 🐛 Solución de Problemas
+##  Solución de Problemas
 
 ### Error: "No module named 'X'"
 ```bash
@@ -240,7 +240,7 @@ pip install -r requirements.txt
 - Reduce el número de documentos para pruebas iniciales
 - Considera usar chunks más pequeños (chunk_size=500)
 
-## 📈 Mejoras Futuras
+##  Mejoras Futuras
 
 - [ ] Soporte para más formatos de documentos
 - [ ] Análisis de gráficos y tablas
@@ -249,22 +249,10 @@ pip install -r requirements.txt
 - [ ] Análisis de sentimientos en reportes
 - [ ] Dashboard con métricas económicas
 
-## 🤝 Contribuciones
 
-Para contribuir al proyecto:
-1. Fork el repositorio
-2. Crea una rama para tu feature
-3. Commit tus cambios
-4. Push a la rama
-5. Crea un Pull Request
 
-## 📞 Soporte
 
-Para soporte técnico o preguntas:
-- Crea un issue en GitHub
-- Contacta al equipo de desarrollo de ANIF
-
-## 📄 Licencia
+##  Licencia
 
 Este proyecto está bajo la licencia MIT. Ver `LICENSE` para más detalles.
 
