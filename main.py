@@ -97,8 +97,12 @@ def show_agent_interface():
                 st.success("Sistema RAG inicializado correctamente")
                 st.rerun()
             else:
-                st.error("Error al inicializar el sistema RAG")
-                st.warning("Continuando solo con conocimiento general")
+                # Mostrar información específica del error para debugging
+                if not os.path.exists("vectorstore"):
+                    st.info(" Vectorstore no encontrado - esto es normal en Streamlit Cloud")
+                if not os.path.exists("RAG"):
+                    st.info(" Carpeta RAG no encontrada - documentos no disponibles")
+                st.warning("Continuando solo con conocimiento general del modelo Groq")
                 # No return - continuar con funcionalidad limitada
     
     # Mostrar historial de chat
@@ -106,14 +110,14 @@ def show_agent_interface():
         if message["role"] == "user":
             st.markdown(f"""
             <div class="chat-message user-message">
-                <strong>👤 Usuario:</strong><br>
+                <strong> Usuario:</strong><br>
                 {message["content"]}
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
             <div class="chat-message assistant-message">
-                <strong>🤖 Asistente:</strong><br>
+                <strong> Asistente:</strong><br>
                 {message["content"]}
             </div>
             """, unsafe_allow_html=True)
@@ -128,13 +132,13 @@ def show_agent_interface():
     col1, col2 = st.columns([1, 4])
     
     with col1:
-        send_button = st.button("📤 Enviar", type="primary")
+        send_button = st.button(" Enviar", type="primary")
     
     with col2:
         st.markdown("**🔍 Modo de Búsqueda:**")
         search_mode = st.radio(
             "Selecciona el modo:",
-            ["🔄 Híbrido (RAG + Conocimiento General)", "📚 Solo RAG", "🌐 Solo Conocimiento General"],
+            ["🔄 Híbrido (RAG + Conocimiento General)", " Solo RAG", " Solo Conocimiento General"],
             index=0,
             key="search_mode"
         )
@@ -142,7 +146,7 @@ def show_agent_interface():
     # Procesar pregunta manual
     if send_button and user_question:
         if not st.session_state.rag_system.groq_client:
-            st.error("⚠️ Por favor, configura tu API key de Groq primero")
+            st.error(" Por favor, configura tu API key de Groq primero")
             return
         
         st.session_state.chat_history.append({
@@ -150,11 +154,11 @@ def show_agent_interface():
             "content": user_question
         })
         
-        with st.spinner("🤖 Generando respuesta..."):
+        with st.spinner(" Generando respuesta..."):
             try:
-                if search_mode == "🔄 Híbrido (RAG + Conocimiento General)":
+                if search_mode == " Híbrido (RAG + Conocimiento General)":
                     result = st.session_state.rag_system.query_groq_hybrid(user_question, use_rag=True)
-                elif search_mode == "📚 Solo RAG":
+                elif search_mode == " Solo RAG":
                     context = st.session_state.rag_system.search_similar_documents(user_question) if st.session_state.rag_system.documents_loaded else ""
                     result = st.session_state.rag_system.query_groq_hybrid(user_question, use_rag=bool(context))
                 else:  # Solo Conocimiento General
@@ -198,7 +202,7 @@ def show_agent_interface():
             with cols[i % 2]:
                 if st.button(f"❓ {question}", key=f"example_{i}"):
                     if not st.session_state.rag_system.groq_client:
-                        st.error("⚠️ Por favor, configura tu API key de Groq primero")
+                        st.error(" Por favor, configura tu API key de Groq primero")
                         return
                     
                     st.session_state.chat_history.append({
@@ -225,7 +229,7 @@ def show_report_generation_interface():
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
     
-    st.header("📊 Generación Automática de Informes")
+    st.header(" Generación Automática de Informes")
     
     # Inicialización automática del RAG cuando se accede a informes
     if not st.session_state.rag_system.documents_loaded:
@@ -235,8 +239,12 @@ def show_report_generation_interface():
                 st.success("Sistema RAG inicializado correctamente")
                 st.rerun()
             else:
-                st.error("Error al inicializar el sistema RAG")
-                st.warning("Continuando solo con conocimiento general")
+                # Mostrar información específica del error para debugging
+                if not os.path.exists("vectorstore"):
+                    st.info(" Vectorstore no encontrado - esto es normal en Streamlit Cloud")
+                if not os.path.exists("RAG"):
+                    st.info(" Carpeta RAG no encontrada - documentos no disponibles")
+                st.warning("Continuando solo con conocimiento general del modelo Groq")
     
     # Mostrar historial de chat
     for i, message in enumerate(st.session_state.chat_history):
@@ -250,7 +258,7 @@ def show_report_generation_interface():
         else:
             st.markdown(f"""
             <div class="chat-message assistant-message">
-                <strong>🤖 Asistente:</strong><br>
+                <strong> Asistente:</strong><br>
                 {message["content"]}
             </div>
             """, unsafe_allow_html=True)
@@ -279,7 +287,7 @@ def show_report_generation_interface():
         st.markdown("**🔍 Modo de Búsqueda:**")
         search_mode = st.radio(
             "Selecciona el modo:",
-            ["🔄 Híbrido (RAG + Conocimiento General)", "📚 Solo RAG", "🌐 Solo Conocimiento General"],
+            [" Híbrido (RAG + Conocimiento General)", " Solo RAG", " Solo Conocimiento General"],
             index=0,
             key="report_search_mode"
         )
@@ -287,7 +295,7 @@ def show_report_generation_interface():
     # Procesar solicitud de informe
     if send_button and user_question:
         if not st.session_state.rag_system.groq_client:
-            st.error("⚠️ Por favor, configura tu API key de Groq primero")
+            st.error(" Por favor, configura tu API key de Groq primero")
             return
         
         st.session_state.chat_history.append({
@@ -295,7 +303,7 @@ def show_report_generation_interface():
             "content": user_question
         })
         
-        with st.spinner("📊 Generando informe..."):
+        with st.spinner(" Generando informe..."):
             try:
                 # Agregar contexto específico para informes
                 enhanced_question = f"""Como experto analista económico de ANIF, genera un informe profesional y detallado sobre: {user_question}
@@ -332,7 +340,7 @@ def show_report_generation_interface():
     # Ejemplos de informes
     if not st.session_state.chat_history:
         st.markdown("---")
-        st.header("📋 Tipos de informes disponibles")
+        st.header(" Tipos de informes disponibles")
         
         report_examples = [
             "Informe de perspectivas fiscales Colombia 2026",
@@ -347,7 +355,7 @@ def show_report_generation_interface():
             with cols[i % 2]:
                 if st.button(f"📊 {report}", key=f"report_example_{i}"):
                     if not st.session_state.rag_system.groq_client:
-                        st.error("⚠️ Por favor, configura tu API key de Groq primero")
+                        st.error(" Por favor, configura tu API key de Groq primero")
                         return
                     
                     enhanced_question = f"""Como experto analista económico de ANIF, genera un informe profesional y detallado sobre: {report}
@@ -385,7 +393,7 @@ def show_anif_tools_interface():
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
     
-    st.header("🏛️ Herramientas Especializadas ANIF")
+    st.header(" Herramientas Especializadas ANIF")
     
     # Inicialización automática del RAG cuando se accede a herramientas ANIF
     if not st.session_state.rag_system.documents_loaded:
@@ -395,22 +403,26 @@ def show_anif_tools_interface():
                 st.success("Sistema RAG inicializado correctamente")
                 st.rerun()
             else:
-                st.error("Error al inicializar el sistema RAG")
-                st.warning("Continuando solo con conocimiento general")
+                # Mostrar información específica del error para debugging
+                if not os.path.exists("vectorstore"):
+                    st.info(" Vectorstore no encontrado - esto es normal en Streamlit Cloud")
+                if not os.path.exists("RAG"):
+                    st.info("Carpeta RAG no encontrada - documentos no disponibles")
+                st.warning("Continuando solo con conocimiento general del modelo Groq")
     
     # Mostrar historial de chat
     for i, message in enumerate(st.session_state.chat_history):
         if message["role"] == "user":
             st.markdown(f"""
             <div class="chat-message user-message">
-                <strong>👤 Usuario:</strong><br>
+                <strong> Usuario:</strong><br>
                 {message["content"]}
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
             <div class="chat-message assistant-message">
-                <strong>🤖 Asistente:</strong><br>
+                <strong> Asistente:</strong><br>
                 {message["content"]}
             </div>
             """, unsafe_allow_html=True)
@@ -425,13 +437,13 @@ def show_anif_tools_interface():
     col1, col2 = st.columns([1, 4])
     
     with col1:
-        send_button = st.button("🔍 Analizar", type="primary")
+        send_button = st.button(" Analizar", type="primary")
     
     with col2:
         st.markdown("**🔍 Modo de Búsqueda:**")
         search_mode = st.radio(
             "Selecciona el modo:",
-            ["🔄 Híbrido (RAG + Conocimiento General)", "📚 Solo RAG", "🌐 Solo Conocimiento General"],
+            ["🔄 Híbrido (RAG + Conocimiento General)", " Solo RAG", " Solo Conocimiento General"],
             index=0,
             key="anif_search_mode"
         )
@@ -439,7 +451,7 @@ def show_anif_tools_interface():
     # Procesar consulta especializada
     if send_button and user_question:
         if not st.session_state.rag_system.groq_client:
-            st.error("⚠️ Por favor, configura tu API key de Groq primero")
+            st.error(" Por favor, configura tu API key de Groq primero")
             return
         
         st.session_state.chat_history.append({
@@ -499,7 +511,7 @@ def show_anif_tools_interface():
             with cols[i % 2]:
                 if st.button(f"🔧 {tool}", key=f"anif_tool_{i}"):
                     if not st.session_state.rag_system.groq_client:
-                        st.error("⚠️ Por favor, configura tu API key de Groq primero")
+                        st.error(" Por favor, configura tu API key de Groq primero")
                         return
                     
                     enhanced_question = f"""Como investigador senior de ANIF (Asociación Nacional de Instituciones Financieras), proporciona un análisis técnico especializado sobre: {tool}
@@ -518,7 +530,7 @@ def show_anif_tools_interface():
                         "content": tool
                     })
                     
-                    with st.spinner("🏛️ Procesando análisis especializado..."):
+                    with st.spinner(" Procesando análisis especializado..."):
                         try:
                             result = st.session_state.rag_system.query_groq_hybrid(enhanced_question, use_rag=True)
                             response = result["answer"] if isinstance(result, dict) else result
@@ -562,30 +574,30 @@ def main():
         # 3. Si encontramos la API key, inicializar automáticamente
         if groq_api_key:
             if st.session_state.rag_system.initialize_groq(groq_api_key):
-                st.sidebar.success("🔑 API Key cargada automáticamente")
+                st.sidebar.success(" API Key cargada automáticamente")
             else:
-                st.sidebar.error("❌ Error con API Key automática")
+                st.sidebar.error(" Error con API Key automática")
         else:
             # 4. Solo mostrar input manual si no hay API key en ningún lado
             with st.sidebar:
                 st.header("⚙️ Configuración")
-                st.warning("⚠️ API key no encontrada en variables de entorno ni secretos")
-                st.info("💡 Configura GROQ_API_KEY como variable de entorno o secreto")
+                st.warning(" API key no encontrada en variables de entorno ni secretos")
+                st.info(" Configura GROQ_API_KEY como variable de entorno o secreto")
                 
                 groq_api_key = st.text_input(
-                    "🔑 Groq API Key (Manual)",
+                    " Groq API Key (Manual)",
                     type="password",
                     help="Solo necesario si no está configurada como variable de entorno"
                 )
                 
                 if groq_api_key:
                     if st.session_state.rag_system.initialize_groq(groq_api_key):
-                        st.success("✅ Groq conectado")
+                        st.success(" Groq conectado")
                     else:
-                        st.error("❌ Error conectando Groq")
+                        st.error(" Error conectando Groq")
     
     # Menú de navegación
-    menu_options = ["🤖 Agente", "📊 Generación de Informes", "🏛️ Herramientas ANIF"]
+    menu_options = [" Agente", " Generación de Informes", " Herramientas ANIF"]
     selected_menu = st.selectbox("Selecciona una funcionalidad:", menu_options, key="main_menu")
 
     # Inicialización lazy del RAG - solo cuando se necesite
@@ -605,3 +617,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
