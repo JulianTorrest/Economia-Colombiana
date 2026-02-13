@@ -1,83 +1,121 @@
-# 🏛️ ANIF - Asistente de Investigación Económica
+# ANIF - Asistente de Investigación Económica
 
-Sistema RAG (Retrieval-Augmented Generation) con IA para análisis de documentos económicos del equipo de investigación de ANIF (Asociación Nacional de Instituciones Financieras).
+Sistema RAG (Retrieval-Augmented Generation) de producción con IA para análisis de documentos económicos del equipo de investigación de ANIF (Asociación Nacional de Instituciones Financieras).
 
-## 🚀 Características
+## Características Principales
 
-- **Sistema RAG Avanzado**: Procesamiento inteligente de documentos PDF y Excel
-- **LLM Gratuito**: Integración con Groq (Llama 3.1 70B)
-- **Interfaz Moderna**: Aplicación web con Streamlit
-- **Análisis Especializado**: Enfocado en economía colombiana
-- **Búsqueda Semántica**: Embeddings multilingües para mejor comprensión
-- **Chat Interactivo**: Conversación natural con el asistente
+- **Sistema RAG de Producción**: Procesamiento inteligente con rechazo automático cuando el contexto es insuficiente
+- **Ingesta Incremental**: Sistema de hash MD5 que evita reprocesamiento de archivos sin cambios
+- **API REST Completa**: Endpoints para chat, ingesta de documentos, y acceso a evidencias
+- **Memoria Multi-turno**: Soporte para conversaciones con sessionId (hasta 2 turnos)
+- **Observabilidad Completa**: Logs estructurados JSON con tiempos divididos (embedding vs inferencia)
+- **Citas Precisas**: Cada respuesta incluye fragmentos específicos con doc_id y puntuación
+- **Integración de Herramientas**: Clasificación de intenciones y escalamiento automático
+- **Despliegue Dockerizado**: Un solo comando para levantar toda la infraestructura
+- **Suite de Pruebas**: Más de 5 pruebas de integración con reportes automáticos
 
-## 📋 Requisitos Previos
+## Requisitos Previos
 
-1. **Python 3.8+**
+1. **Python 3.8+** o **Docker** (para despliegue containerizado)
 2. **API Key de Groq** (gratuita)
    - Regístrate en [https://console.groq.com/](https://console.groq.com/)
    - Obtén tu API key gratuita
 
-## 🛠️ Instalación
+## Instalación y Despliegue
 
-### 1. Clonar o descargar el proyecto
+### Opción 1: Despliegue con Docker (Recomendado)
+
 ```bash
-# Si tienes git instalado
-git clone <url-del-repositorio>
+# 1. Clonar el repositorio
+git clone https://github.com/JulianTorrest/Economia-Colombiana.git
 cd "Economia Colombiana - ANIF"
+
+# 2. Configurar variables de entorno
+copy .env.example .env
+# Editar .env y agregar: GROQ_API_KEY=tu_api_key_aqui
+
+# 3. Levantar toda la infraestructura
+docker-compose up --build
 ```
 
-### 2. Crear entorno virtual (recomendado)
+**Acceso:**
+
+- Frontend (Streamlit): <http://localhost:8501>
+- API REST: <http://localhost:8000>
+- Documentación API: <http://localhost:8000/docs>
+
+### Opción 2: Instalación Local
+
 ```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
+# 1. Clonar y configurar entorno
+git clone https://github.com/JulianTorrest/Economia-Colombiana.git
+cd "Economia Colombiana - ANIF"
 
-# macOS/Linux
-python3 -m venv venv
-source venv/bin/activate
-```
+# 2. Crear entorno virtual
+python -m venv venv
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # macOS/Linux
+
+# 3. Instalar dependencias
 pip install -r requirements.txt
 ```
 
-### 2. Configuración de API Key
-Crea un archivo `.env` con tu API key de Groq:
-```bash
-# Copia el template
-copy .env.template .env
+### Configuración de API Key
 
-# Edita .env y agrega tu API key
-GROQ_API_KEY=gsk_tu_api_key_aqui
+```bash
+# Crear archivo .env
+echo GROQ_API_KEY=tu_api_key_aqui > .env
 ```
 
 **Obtén tu API key gratuita en:** https://console.groq.com/
 
-### 3. Inicialización del Sistema RAG (OBLIGATORIO)
-**⚠️ IMPORTANTE: Este paso debe ejecutarse ANTES del despliegue**
+### Ejecución Local
 
 ```bash
-python setup_rag.py
-```
+# Opción A: Solo Frontend
+streamlit run main.py
 
-Este script:
-- ✅ Valida la conexión con Groq
-- ✅ Inicializa el sistema de embeddings
-- ✅ Procesa todos los documentos RAG
-- ✅ Crea la base de datos vectorial
-- ✅ Genera archivo de estado del sistema
+# Opción B: Solo API
+python api.py
 
-### 4. Despliegue
-Una vez completada la inicialización:
-```bash
+# Opción C: Ambos servicios
+# Terminal 1:
+python api.py
+# Terminal 2:
 streamlit run main.py
 ```
 
-- "¿Qué dice el último reporte sobre el PIB tendencial?"
-- "¿Cuál es el análisis del presupuesto general de la nación 2026?"
-- "¿Qué impacto fiscal tiene el aumento del salario mínimo 2026?"
-- "¿Cuáles son las elasticidades económicas más recientes?"
+## API REST Endpoints
 
-## 🏗️ Arquitectura del Sistema
+### POST /documentos
+Ingesta incremental de documentos con verificación de hash:
+```bash
+curl -X POST "http://localhost:8000/documentos" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@documento.pdf"
+```
+
+### POST /chat
+Chat con memoria multi-turno y citas:
+```bash
+curl -X POST "http://localhost:8000/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"sessionId": "session123", "mensaje": "¿Qué dice sobre el PIB?"}'
+```
+
+### GET /chunks/{doc_id}/{chunk_id}
+Acceso a evidencias específicas:
+```bash
+curl "http://localhost:8000/chunks/documento.pdf/chunk_1"
+```
+
+### GET /health
+Estado del sistema:
+```bash
+curl "http://localhost:8000/health"
+```
+
+## Arquitectura del Sistema
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
@@ -91,54 +129,91 @@ streamlit run main.py
 │   Interface     │◀───│   (Llama 3.1)    │◀────────────┘
 └─────────────────┘    └──────────────────┘
 ```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Documentos    │    │   Hash MD5 +     │    │   FAISS         │
+│   (PDF/TXT)     │───▶│   Chunking +     │───▶│   Vectorstore   │
+│                 │    │   Embeddings     │    │   Local         │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                                                         │
+┌─────────────────┐    ┌──────────────────┐             │
+│   Streamlit UI  │    │   FastAPI +      │             │
+│   (Frontend)    │◀───│   Groq LLM       │◀────────────┘
+│   Port 8501     │    │   Port 8000      │
+└─────────────────┘    └──────────────────┘
+                              │
+                    ┌──────────────────┐
+                    │   Observabilidad │
+                    │   Logs JSON +    │
+                    │   Métricas       │
+                    └──────────────────┘
+```
 
-## 📁 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 Economia Colombiana - ANIF/
-├── main.py                 # Aplicación principal de Streamlit
-├── requirements.txt        # Dependencias de Python
-├── README.md              # Este archivo
-└── RAG/                   # Carpeta con documentos económicos
-    ├── *.pdf             # Reportes y documentos técnicos
-    └── *.xlsx            # Datos económicos en Excel
+├── main.py                    # Frontend Streamlit
+├── api.py                     # API REST con FastAPI
+├── rag_core.py               # Sistema RAG principal
+├── docker-compose.yml        # Orquestación de servicios
+├── requirements.txt          # Dependencias Python
+├── test_*.py                 # Suite de pruebas
+├── run_tests.py              # Runner de pruebas
+├── test_reports.py           # Generador de reportes
+├── processed_documents.json  # Registro de hashes
+└── RAG/                      # Documentos económicos
+    ├── *.pdf                # Reportes técnicos
+    └── *.txt                # Documentos de texto
 ```
 
-## 🔧 Configuración Avanzada
+## Pruebas y Calidad
 
-### Variables de Entorno (Opcional)
-Crea un archivo `.env` para configuraciones:
-```env
-GROQ_API_KEY=tu_api_key_aqui
-RAG_FOLDER_PATH=./RAG
-CHUNK_SIZE=1000
-CHUNK_OVERLAP=200
+### Ejecutar Suite de Pruebas
+
+```bash
+# Pruebas básicas
+python run_tests.py --quick
+
+# Pruebas completas con reportes
+python run_tests.py --reports
+
+# Pruebas específicas
+python run_tests.py --api-only
+python run_tests.py --rag-only
 ```
 
-### Personalización del Modelo
-En `main.py`, puedes cambiar:
-- **Modelo de Groq**: Línea 186 (`model="llama-3.1-70b-versatile"`)
-- **Embeddings**: Línea 77 (modelo de sentence-transformers)
-- **Parámetros de chunking**: Líneas 136-140
+### Reportes Generados
 
-## 🚀 Despliegue en Streamlit Cloud
+- **Logs detallados**: `test_results/`
+- **Reportes HTML**: `test_reports/`
+- **Cobertura de código**: `test_reports/coverage_html/`
+- **Formato JUnit**: Para integración CI/CD
 
-### 1. Preparar el repositorio
-- Sube tu código a GitHub
-- Asegúrate de incluir `requirements.txt`
+## Despliegue en Streamlit Cloud
 
-### 2. Conectar con Streamlit Cloud
+**SÍ, `main.py` es el archivo correcto para Streamlit Cloud.**
+
+### Configuración para Streamlit Cloud
+
+1. **Repositorio**: <https://github.com/JulianTorrest/Economia-Colombiana>
+2. **Archivo principal**: `main.py`
+3. **Secretos requeridos**:
+   - `GROQ_API_KEY`: Tu API key de Groq
+
+### Pasos de Despliegue
+
 1. Ve a [share.streamlit.io](https://share.streamlit.io)
 2. Conecta tu repositorio de GitHub
 3. Selecciona `main.py` como archivo principal
+4. Agrega `GROQ_API_KEY` en la sección de secretos
+5. La aplicación se desplegará automáticamente
 
-### 3. Configurar secretos
-En Streamlit Cloud, agrega:
-- `GROQ_API_KEY`: Tu API key de Groq
+### Características del Despliegue
 
-### 4. Desplegar
-- La aplicación se desplegará automáticamente
-- Comparte la URL con tu equipo
+- **Auto-inicialización**: El sistema RAG se inicializa automáticamente
+- **Gestión de memoria**: Optimizado para Streamlit Cloud
+- **Carga diferida**: Importaciones lazy para startup rápido
+- **Manejo de errores**: Fallbacks para conexiones API
 
 ## 🔒 Seguridad
 
@@ -195,6 +270,5 @@ Este proyecto está bajo la licencia MIT. Ver `LICENSE` para más detalles.
 
 ---
 
-**Desarrollado para ANIF - Asociación Nacional de Instituciones Financieras**
 
 *Sistema RAG especializado en análisis económico colombiano*
